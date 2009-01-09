@@ -2,12 +2,12 @@ package Kiddman::Client::Page;
 use Moose;
 use Kiddman::Client::Meta::Attribute::Trait::Labeled;
 
-use Kiddman::Client::Types;
+use Kiddman::Client::Types qw(LongStr);
 
 has meta_description => (
     traits => [qw(Labeled)],
     is => 'rw',
-    isa => 'LongStr',
+    isa => LongStr,
     label => "Meta Description"
 );
 has template => (

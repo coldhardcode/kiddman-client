@@ -1,5 +1,6 @@
 package Kiddman::Client::Types;
 use Moose;
+use Moose::Util::TypeConstraints;
 
 use MooseX::Types
     -declare => [qw(
