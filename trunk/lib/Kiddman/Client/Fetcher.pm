@@ -6,7 +6,7 @@ use Class::MOP;
 use LWP::UserAgent;
 use JSON::XS;
 
-sub fetcher {
+sub fetch {
     my ($url, $siteid, $path) = @_;
 
     my $ua = LWP::UserAgent->new;
@@ -19,9 +19,9 @@ sub fetcher {
         use Data::Dumper;
         print STDERR Dumper($inst);
 
-        if(defined($inst->{class})) {
-            Class::MOP::load_class($inst->{class});
-            return $inst->{class}->new($inst->{options});
+        if(defined($inst->{page})) {
+            Class::MOP::load_class($inst->{page});
+            return $inst->{page}->new($inst->{options});
         }
 
     } else {
