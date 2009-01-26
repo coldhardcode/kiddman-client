@@ -4,7 +4,7 @@ use strict;
 
 use parent 'Catalyst::Action';
 
-use Kiddman::Fetcher;
+use Kiddman::Client::Fetcher;
 use Catalyst::ActionChain; 
 use URI;
 
@@ -104,7 +104,7 @@ sub dispatch {
 
 sub _fetch {
     my ( $self, $base, $site_id, $url ) = @_;
-    return Kiddman::Fetcher::fetcher( $base, $site_id, $url );
+    return Kiddman::Client::Fetcher::fetcher( $base, $site_id, $url );
 }
 
 
