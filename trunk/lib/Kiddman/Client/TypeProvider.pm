@@ -3,7 +3,7 @@ use Moose::Role;
 
 has 'value_accessor' => (
     is => 'ro',
-    isa => 'Str',
+    isa => 'Maybe[Str]',
     default => sub { 'id' }
 );
 
