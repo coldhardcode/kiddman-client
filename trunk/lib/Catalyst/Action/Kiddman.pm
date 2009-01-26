@@ -82,6 +82,7 @@ sub dispatch {
     @args = @{ $c->req->args };
 
     my $url  = join("/", @args);
+    $c->log->debug("Looking for '$url' from Kiddman");
     my $page = eval { $self->_fetch( $base_url, $site_id, $url ); };
 
     if ( $@ or not defined $page ) {
@@ -96,6 +97,10 @@ sub dispatch {
         $c->detach("/$default");
     }
 
+    if($page->can('execute')) {
+        $page->execute($c);
+    }
+
     my $source = $c->stash->{page} || {};
 
     # Now that we have a page, merge it
@@ -104,7 +109,7 @@ sub dispatch {
 
 sub _fetch {
     my ( $self, $base, $site_id, $url ) = @_;
-    return Kiddman::Client::Fetcher::fetcher( $base, $site_id, $url );
+    return Kiddman::Client::Fetcher::fetch( $base, $site_id, $url );
 }
 
 

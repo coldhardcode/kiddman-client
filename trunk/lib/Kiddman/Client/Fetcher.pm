@@ -16,9 +16,6 @@ sub fetch {
     if($resp->is_success) {
         my $inst = decode_json($resp->content);
 
-        use Data::Dumper;
-        print STDERR Dumper($inst);
-
         if(defined($inst->{page})) {
             Class::MOP::load_class($inst->{page});
             return $inst->{page}->new($inst->{options});
