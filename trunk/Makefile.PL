@@ -2,7 +2,7 @@
 # expected.  you have been warned
 use inc::Module::Install;
 
-name 'Kiddman::Client';
+name 'Kiddman-Client';
 all_from 'lib/Kiddman/Client.pm';
 
 requires 'File::Spec';
