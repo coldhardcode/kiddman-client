@@ -69,7 +69,7 @@ sub dispatch {
 
     my $site_id  = $controller->{'Kiddman'}->{site_id};
     my $base_url = $controller->{'Kiddman'}->{url};
-    
+
     unless ( $base_url and $site_id ) {
         die "ActionClass('Kiddman') requires controller configures site_id and url, please view `perldoc Catalyst::ActionClass::Kiddman`\n";
     }
@@ -83,7 +83,7 @@ sub dispatch {
 
     my $url  = join("/", @args);
     my $page = eval { $self->_fetch( $base_url, $site_id, $url ); };
-    
+
     if ( $@ or not defined $page ) {
         my $default = $controller->action_for('default');
         unless ( defined $default ) {
