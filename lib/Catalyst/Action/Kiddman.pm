@@ -4,7 +4,7 @@ use strict;
 
 use parent 'Catalyst::Action';
 
-use Kiddman::Fetcher;
+use Kiddman::Client::Fetcher;
 use Catalyst::ActionChain; 
 use URI;
 
