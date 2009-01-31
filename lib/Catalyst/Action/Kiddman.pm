@@ -4,6 +4,7 @@ use strict;
 
 use parent 'Catalyst::Action';
 
+use String::Random;
 use Kiddman::Client::Fetcher;
 use Catalyst::ActionChain; 
 use URI;
@@ -65,10 +66,29 @@ controller's C<default> action, and failing that will dispatch to "/default".
 sub dispatch {
     my ( $self, $c ) = @_;
 
+    unless ( defined $self->{_fetcher} ) {
+        my %opts = ();
+        if ( $c->can('cache') ) {
+            $opts{cache} = $c->cache;
+        }
+        $self->{_fetcher} = Kiddman::Client::Fetcher->new(%opts);
+    }
+
+    my $path = $c->req->uri;
+    my $base = $c->req->base;
+    if ( $c->config->{using_frontend_proxy} ) {
+        ( $base, $path ) = $self->_private_path($c);
+    }
+
     my $controller = $c->component( $self->class );
 
     my $site_id  = $controller->{'Kiddman'}->{site_id};
     my $base_url = $controller->{'Kiddman'}->{url};
+    my $key      = $controller->{'Kiddman'}->{purge_key};
+
+    if ( not $key ) {
+        $key = String::Random::random_string('....................');
+    }
 
     unless ( $base_url and $site_id ) {
         die "ActionClass('Kiddman') requires controller configures site_id and url, please view `perldoc Catalyst::ActionClass::Kiddman`\n";
@@ -82,19 +102,33 @@ sub dispatch {
     @args = @{ $c->req->args };
 
     my $url  = join("/", @args);
-    $c->log->debug("Looking for '$url' from Kiddman");
-    my $page = eval { $self->_fetch( $base_url, $site_id, $url ); };
+    my $page;
 
-    if ( $@ or not defined $page ) {
-        my $default = $controller->action_for('default');
-        unless ( defined $default ) {
-            $default = $c->controller('Root')->action_for('default');
+    if ( not defined $page ) {
+        if ( $c->req->params->{kiddman_action} eq 'purge' ) {
+            $self->_purge( $c->req->params->{kiddman_key} );
         }
-        if ( $c->debug ) {
-            $c->log->debug("Failed fetching $url from Kiddman");
-            $c->log->debug("Detaching to $default");
+
+        $page = eval { 
+            $self->_fetch( $base_url, $site_id, $url, 
+                { trackback => $path, key => $key } 
+            ); 
+        };
+
+        if ( $@ ) {
+            $c->log->error($@);
         }
-        $c->detach("/$default");
+        if ( $@ or not defined $page ) {
+            my $default = $controller->action_for('default');
+            unless ( defined $default ) {
+                $default = $c->controller('Root')->action_for('default');
+            }
+            if ( $c->debug ) {
+                $c->log->debug("Failed fetching $url from Kiddman");
+                $c->log->debug("Detaching to $default");
+            }
+            $c->detach("/$default");
+        }
     }
 
     if($page->can('execute')) {
@@ -108,9 +142,57 @@ sub dispatch {
 }
 
 sub _fetch {
-    my ( $self, $base, $site_id, $url ) = @_;
-    return Kiddman::Client::Fetcher::fetch( $base, $site_id, $url );
+    my $self = shift;
+    return $self->{_fetcher}->fetch( @_ );
 }
 
+sub _private_path {
+    my ( $self, $c ) = @_;
+
+    local (*ENV) = $c->engine->env || \%ENV;
+
+    my $scheme    = 'http';
+    my $host      = $ENV{SERVER_NAME};
+    my $port      = $ENV{SERVER_PORT} || ( $c->request->secure ? 443 : 80 );
+    my $base_path;
+    if ( exists $ENV{REDIRECT_URL} ) {
+        $base_path = $ENV{REDIRECT_URL};
+        $base_path =~ s/$ENV{PATH_INFO}$//;
+    }
+    else {
+        $base_path = $ENV{SCRIPT_NAME} || '/';
+    }
+
+    # set the request URI
+    my $path = $base_path . ( $ENV{PATH_INFO} || '' );
+    $path =~ s{^/+}{};
+
+    # Using URI directly is way too slow, so we construct the URLs manually
+    my $uri_class = "URI::$scheme";
+
+    # HTTP_HOST will include the port even if it's 80/443
+    $host =~ s/:(?:80|443)$//;
+
+    if ( $port !~ /^(?:80|443)$/ && $host !~ /:/ ) {
+        $host .= ":$port";
+    }
+
+    # Escape the path
+    $path =~ s/([^$URI::uric])/$URI::Escape::escapes{$1}/go;
+    $path =~ s/\?/%3F/g; # STUPID STUPID SPECIAL CASE
+
+    my $query = $ENV{QUERY_STRING} ? '?' . $ENV{QUERY_STRING} : '';
+    my $uri   = $scheme . '://' . $host . '/' . $path . $query;
+
+    my $uri = bless \$uri, $uri_class;
+    # set the base URI
+    # base must end in a slash
+    $base_path .= '/' unless $base_path =~ m{/$};
+
+    my $base_uri = $scheme . '://' . $host . $base_path;
+    $base_uri = bless \$base_uri, $uri_class;
+
+    return ( $base_uri, $uri );
+}
 
 1;
