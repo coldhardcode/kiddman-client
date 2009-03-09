@@ -109,10 +109,10 @@ sub dispatch {
             $self->_purge( $c->req->params->{kiddman_key} );
         }
 
-        $page = eval { 
-            $self->_fetch( $base_url, $site_id, $url, 
-                { trackback => $path, key => $key } 
-            ); 
+        $page = eval {
+            $self->_fetch( $base_url, $site_id, $url,
+                { trackback => $path, key => $key }
+            );
         };
 
         if ( $@ ) {
@@ -139,6 +139,10 @@ sub dispatch {
 
     # Now that we have a page, merge it
     $c->stash->{page} = Catalyst::Utils::merge_hashes($source, $page);
+
+    unless(defined($c->stash->{template})) {
+        $c->stash->{template} = $page->template;
+    }
 }
 
 sub _fetch {

@@ -65,7 +65,7 @@ sub fetch {
     if ( defined $self->cache ) {
         my $cache_entity = $self->cache->get($cache_key);
         $content = $cache_entity->{content};
-    } 
+    }
 
     unless ( $content ) {
         $args->{path} = $path;
